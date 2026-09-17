@@ -1,0 +1,590 @@
+// This is your Prisma schema file for MY KUHLI
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  SALES_MANAGER
+  EXPORT_MANAGER
+  QUALITY_MANAGER
+  INVENTORY_MANAGER
+  ACCOUNTANT
+  CONTENT_MANAGER
+  BUYER
+}
+
+enum ProcessingMethod {
+  NATURAL
+  WASHED
+  ANAEROBIC_NATURAL
+  ANAEROBIC_WASHED
+  HONEY
+  EXPERIMENTAL
+}
+
+enum CoffeeGrade {
+  GRADE_1_SPECIALTY
+  GRADE_2_SPECIALTY
+  GRADE_3_PREMIUM
+  GRADE_4_COMMERCIAL
+  GRADE_5_COMMERCIAL
+  UG_UNDER_GRADE
+}
+
+enum PricingType {
+  PUBLIC
+  REQUEST_QUOTE_ONLY
+  TIERED_PRIVATE
+}
+
+enum RFQStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  QUOTATION_SENT
+  NEGOTIATION
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED_TO_ORDER
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  REVISION_REQUESTED
+  EXPIRED
+}
+
+enum OrderStatus {
+  QUOTE_ACCEPTED
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  PROCESSING
+  QUALITY_INSPECTION
+  READY_FOR_EXPORT
+  EXPORT_DOCUMENTATION
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  TELEGRAPHIC_TRANSFER_TT
+  LETTER_OF_CREDIT_LC
+  CASH_AGAINST_DOCUMENTS_CAD
+  ESCROW
+  BANK_GUARANTEE
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  PARTIALLY_PAID
+  FAILED
+  REFUNDED
+}
+
+enum Incoterm {
+  FOB_DJIBOUTI
+  CIF
+  CFR
+  EXW_ADDIS_ABABA
+  FCA_MODJO
+  DDP
+}
+
+model User {
+  id               String         @id @default(uuid())
+  email            String         @unique
+  passwordHash     String
+  fullName         String
+  role             Role           @default(BUYER)
+  phone            String?
+  avatarUrl        String?
+  isEmailVerified  Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  buyerProfile     BuyerProfile?
+  rfqs             RFQ[]
+  orders           Order[]
+  messages         Message[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  blogPosts        BlogPost[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model BuyerProfile {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName          String
+  businessType         String    // Roaster, Importer, Distributor, Retailer, Cafe Chain
+  taxRegistrationNumber String?
+  website              String?
+  country              String
+  city                 String
+  address              String?
+  destinationPort      String?
+  annualCoffeeVolumeMT Float?   // In Metric Tons
+  importExperienceYears Int?
+  preferredOrigins     String[]  // Yirgacheffe, Sidama, Jimma, Guji
+  preferredProcessing  String[]  // Natural, Washed, Anaerobic
+  accountStatus        String    @default("ACTIVE") // NEW_LEAD, QUALIFIED, ACTIVE, INACTIVE
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  rfqs                 RFQ[]
+  quotations           Quotation[]
+  orders               Order[]
+}
+
+model Origin {
+  id            String       @id @default(uuid())
+  name          String       @unique // Jimma, Yirgacheffe, Sidama, Guji, Harrar, Limu, Lekempti, Keffa
+  slug          String       @unique
+  region        String       // Oromia, Sidama, SNNPR
+  elevationRange String      // e.g., "1,750 - 2,200m"
+  flavorProfile String
+  harvestPeriod String       // e.g., "November - February"
+  description   String
+  imageUrl      String
+  coordinates   String?      // Lat, Long
+  farms         Farm[]
+  products      Product[]
+  lots          CoffeeLot[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Farm {
+  id            String       @id @default(uuid())
+  name          String
+  originId      String
+  origin        Origin       @relation(fields: [originId], references: [id])
+  woreda        String
+  altitude      Int          // in meters
+  cooperative   String?
+  managerName   String?
+  totalAreaHa   Float?
+  varieties     String[]
+  certifications String[]
+  products      Product[]
+  lots          CoffeeLot[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Product {
+  id                 String           @id @default(uuid())
+  name               String           // e.g., "Jimma Natural Grade 4", "Yirgacheffe Washed G1"
+  slug               String           @unique
+  sku                String           @unique
+  originId           String
+  origin             Origin           @relation(fields: [originId], references: [id])
+  farmId             String?
+  farm               Farm?            @relation(fields: [farmId], references: [id])
+  processingMethod   ProcessingMethod
+  grade              CoffeeGrade
+  variety            String           // Heirloom, 74110, 74112, Kurume, Dega
+  altitudeMin        Int
+  altitudeMax        Int
+  cupScore           Float            // SCA cupping score (e.g. 84.5, 88.0)
+  screenSize         String           // Screen 14/15/17/18
+  moisturePercent    Float            // e.g. 10.5% - 11.5%
+  harvestYear        Int              // e.g. 2026
+  flavorNotes        String[]         // Jasmine, Bergamot, Blueberry, Dark Chocolate, Peach
+  aroma              String
+  acidity            String           // Bright, Citric, Malic, Winey
+  body               String           // Silky, Full, Velvety
+  sweetness          String           // Honey, Cane Sugar, Caramel
+  minOrderQuantityKg Int              @default(3600) // e.g. 60 bags (3600 kg)
+  packagingOptions   String[]         // 60kg GrainPro Jute Bag, 30kg Vacuum Box
+  pricingType        PricingType      @default(REQUEST_QUOTE_ONLY)
+  basePricePerKgUSD  Float?           // Public benchmark FOB
+  isAvailable        Boolean          @default(true)
+  featured           Boolean          @default(false)
+  description        String
+  specSheetUrl       String?
+  certifications     String[]         // Organic, Fairtrade, Rainforest Alliance, UTZ, ECTA Certified
+  images             String[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  lots               CoffeeLot[]
+  inventory          Inventory[]
+  rfqItems           RFQItem[]
+  quotationItems     QuotationItem[]
+  orderItems         OrderItem[]
+}
+
+model CoffeeLot {
+  id                   String             @id @default(uuid())
+  lotNumber            String             @unique // e.g. MK-JIM-2026-001
+  productId            String
+  product              Product            @relation(fields: [productId], references: [id])
+  originId             String
+  origin               Origin             @relation(fields: [originId], references: [id])
+  farmId               String?
+  farm                 Farm?              @relation(fields: [farmId], references: [id])
+  harvestSeason        String             // 2025/2026
+  processingDate       DateTime
+  cuppingScoreFinal    Float
+  totalBags60kg        Int
+  availableBags60kg    Int
+  reservedBags60kg     Int                @default(0)
+  moistureContent      Float
+  waterActivity        Float?
+  warehouseLocation    String             // Modjo Dry Port Warehouse C
+  traceabilityRecord   TraceabilityRecord?
+  shipments            Shipment[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([lotNumber])
+}
+
+model Warehouse {
+  id           String      @id @default(uuid())
+  name         String      // Modjo Dry Port Warehouse A, Addis Ababa Central Storage
+  code         String      @unique
+  city         String
+  country      String      @default("Ethiopia")
+  capacityBags Int
+  currentBags  Int
+  inventories  Inventory[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Inventory {
+  id             String    @id @default(uuid())
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  warehouseId    String
+  warehouse      Warehouse @relation(fields: [warehouseId], references: [id])
+  totalQuantityKg Float
+  reservedKg     Float     @default(0)
+  availableKg    Float
+  minStockAlertKg Float    @default(10000)
+  status         String    @default("IN_STOCK") // IN_STOCK, LOW_STOCK, RESERVED, OUT_OF_STOCK
+  updatedAt      DateTime  @updatedAt
+}
+
+model RFQ {
+  id                   String          @id @default(uuid())
+  rfqNumber            String          @unique // e.g. RFQ-2026-0142
+  userId               String
+  user                 User            @relation(fields: [userId], references: [id])
+  buyerProfileId       String
+  buyerProfile         BuyerProfile    @relation(fields: [buyerProfileId], references: [id])
+  destinationCountry   String
+  destinationPort      String
+  incotermPreference   Incoterm        @default(FOB_DJIBOUTI)
+  preferredShipDate    DateTime?
+  targetPricePerKgUSD  Float?
+  paymentPreference    PaymentMethod   @default(TELEGRAPHIC_TRANSFER_TT)
+  specialNotes         String?
+  status               RFQStatus       @default(SUBMITTED)
+  items                RFQItem[]
+  quotation            Quotation?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([rfqNumber])
+  @@index([status])
+}
+
+model RFQItem {
+  id              String   @id @default(uuid())
+  rfqId           String
+  rfq             RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  quantityKg      Float
+  packagingOption String
+}
+
+model Quotation {
+  id               String          @id @default(uuid())
+  quotationNumber  String          @unique // e.g. MK-QT-2026-088
+  rfqId            String?         @unique
+  rfq              RFQ?            @relation(fields: [rfqId], references: [id])
+  buyerProfileId   String
+  buyerProfile     BuyerProfile    @relation(fields: [buyerProfileId], references: [id])
+  incoterm         Incoterm        @default(FOB_DJIBOUTI)
+  destinationPort  String
+  subtotalUSD      Float
+  freightUSD       Float           @default(0)
+  insuranceUSD     Float           @default(0)
+  otherFeesUSD     Float           @default(0)
+  totalAmountUSD   Float
+  currency         String          @default("USD")
+  paymentTerms     String          // e.g. "30% Advance T/T upon contract, 70% against original Bill of Lading"
+  validUntil       DateTime
+  status           QuotationStatus @default(SENT)
+  pdfUrl           String?
+  adminNotes       String?
+  items            QuotationItem[]
+  order            Order?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([quotationNumber])
+}
+
+model QuotationItem {
+  id             String    @id @default(uuid())
+  quotationId    String
+  quotation      Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  quantityKg     Float
+  unitPricePerKg Float
+  totalUSD       Float
+  packaging      String
+}
+
+model Order {
+  id              String         @id @default(uuid())
+  orderNumber     String         @unique // e.g. MK-ORD-2026-044
+  quotationId     String?        @unique
+  quotation       Quotation?     @relation(fields: [quotationId], references: [id])
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  buyerProfileId  String
+  buyerProfile    BuyerProfile   @relation(fields: [buyerProfileId], references: [id])
+  totalAmountUSD  Float
+  currency        String         @default("USD")
+  incoterm        Incoterm
+  destinationPort String
+  orderStatus     OrderStatus    @default(QUOTE_ACCEPTED)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  paymentMethod   PaymentMethod  @default(TELEGRAPHIC_TRANSFER_TT)
+  timelineEvents  Json[]         // Step by step progression log with timestamps
+  items           OrderItem[]
+  payments        Payment[]
+  shipments       Shipment[]
+  exportDocuments ExportDocument[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([orderNumber])
+  @@index([orderStatus])
+}
+
+model OrderItem {
+  id             String    @id @default(uuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  quantityKg     Float
+  unitPricePerKg Float
+  totalUSD       Float
+  packaging      String
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  paymentReference String        @unique // e.g. PAY-2026-091
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id])
+  amountUSD        Float
+  paymentMethod    PaymentMethod
+  paymentStatus    PaymentStatus @default(PENDING)
+  swiftTransactionRef String?
+  receiptDocumentUrl String?
+  notes            String?
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Shipment {
+  id                 String             @id @default(uuid())
+  shipmentNumber     String             @unique // e.g. SHP-2026-019
+  orderId            String
+  order              Order              @relation(fields: [orderId], references: [id])
+  lotId              String?
+  lot                CoffeeLot?         @relation(fields: [lotId], references: [id])
+  originWarehouse    String             // Modjo Dry Port
+  portOfLoading      String             // Port of Djibouti
+  portOfDischarge    String             // Port of Hamburg / Rotterdam
+  shippingLine       String             // Maersk / MSC / CMA CGM
+  vesselName         String             // MSC Oscar / Maersk Mc-Kinney
+  voyageNumber       String?
+  containerNumber    String             // MSKU9238472
+  sealNumber         String             // ET-982341
+  containerType      String             // 20ft FCL Standard (holds 320 bags / 19.2 MT)
+  totalBags          Int
+  billOfLadingNumber String?
+  etd                DateTime
+  eta                DateTime
+  currentStatus      String             @default("CUSTOMS_CLEARANCE_DJIBOUTI") // READY, DISPATCHED_TO_PORT, AT_PORT, LOADED, ON_WATER, ARRIVED, DELIVERED
+  trackingUpdates    Json[]
+  documents          ShipmentDocument[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model ShipmentDocument {
+  id           String    @id @default(uuid())
+  shipmentId   String
+  shipment     Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  documentType String    // BILL_OF_LADING, COMMERCIAL_INVOICE, PACKING_LIST, PHYTO, COO
+  documentName String
+  documentUrl  String
+  uploadedAt   DateTime  @default(now())
+}
+
+model ExportDocument {
+  id           String    @id @default(uuid())
+  orderId      String
+  order        Order     @relation(fields: [orderId], references: [id])
+  documentType String    // CERTIFICATE_OF_ORIGIN, PHYTOSANITARY, QUALITY_CERT_ECTA, EXPORT_PERMIT, COMMERCIAL_INVOICE, PACKING_LIST
+  documentName String
+  documentNumber String
+  issuingAuthority String // e.g. Ethiopian Coffee and Tea Authority (ECTA), Ministry of Agriculture
+  issuedDate   DateTime
+  documentUrl  String
+  verified     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+}
+
+model TraceabilityRecord {
+  id                   String    @id @default(uuid())
+  lotId                String    @unique
+  lot                  CoffeeLot @relation(fields: [lotId], references: [id])
+  lotNumber            String    @unique
+  farmName             String
+  cooperativeName      String
+  woredaZone           String
+  altitudeMeters       Int
+  harvestMonthYear     String
+  washingStationName   String
+  fermentationHours    Int
+  dryingDaysOnRaisedBeds Int
+  parchmentStorage     String
+  ectaLiquoringGrade   String
+  gpsLatitude          Float
+  gpsLongitude         Float
+  farmerFairShareUSDPerKg Float
+  qrCodeSvg            String?
+  qrVerificationUrl    String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Conversation {
+  id          String    @id @default(uuid())
+  subject     String
+  senderId    String
+  recipientId String
+  messages    Message[]
+  updatedAt   DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  content        String
+  attachmentUrl  String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // RFQ, QUOTATION, ORDER, PAYMENT, SHIPMENT, SYSTEM
+  title     String
+  message   String
+  linkUrl   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id           String    @id @default(uuid())
+  title        String
+  slug         String    @unique
+  excerpt      String
+  content      String
+  featuredImage String
+  category     String
+  tags         String[]
+  authorId     String
+  author       User      @relation(fields: [authorId], references: [id])
+  published    Boolean   @default(true)
+  readTimeMin  Int       @default(5)
+  publishedAt  DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Testimonial {
+  id          String   @id @default(uuid())
+  buyerName   String
+  companyName String
+  country     String
+  quote       String
+  rating      Int      @default(5)
+  avatarUrl   String?
+  coffeePurchased String
+  createdAt   DateTime @default(now())
+}
+
+model ContactSubmission {
+  id          String   @id @default(uuid())
+  name        String
+  company     String?
+  email       String
+  phone       String?
+  country     String?
+  subject     String
+  message     String
+  status      String   @default("UNREAD") // UNREAD, REPLIED, ARCHIVED
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String   // CREATE_PRODUCT, APPROVE_RFQ, ISSUE_QUOTATION, UPDATE_ORDER, UPLOAD_DOCUMENT
+  entity    String   // Product, RFQ, Quotation, Order, Shipment, Document
+  entityId  String
+  details   Json?
+  ipAddress String?
+  timestamp DateTime @default(now())
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  category    String   // GENERAL, LOGISTICS, FINANCIAL, EMAIL, BRAND
+  updatedAt   DateTime @updatedAt
+}

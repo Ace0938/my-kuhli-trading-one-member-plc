@@ -1,0 +1,300 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User accounts and authentication records",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string", "enum": ["BUYER", "SALES_MANAGER", "EXPORT_MANAGER", "QUALITY_MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"] },
+        "phone": { "type": "string" },
+        "isEmailVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "fullName", "role"]
+    },
+    "BuyerProfile": {
+      "title": "Buyer Profile",
+      "description": "Commercial profile for international coffee roasters and green coffee importers",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "businessType": { "type": "string" },
+        "country": { "type": "string" },
+        "city": { "type": "string" },
+        "destinationPort": { "type": "string" },
+        "annualCoffeeVolumeMT": { "type": "number" }
+      },
+      "required": ["userId", "companyName", "country"]
+    },
+    "Origin": {
+      "title": "Origin Terroir",
+      "description": "Ethiopian coffee growing regions, soil profiles, and washing stations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "region": { "type": "string" },
+        "altitudeMinM": { "type": "number" },
+        "altitudeMaxM": { "type": "number" },
+        "flavorNotes": { "type": "array", "items": { "type": "string" } },
+        "harvestPeriod": { "type": "string" }
+      },
+      "required": ["id", "name", "region"]
+    },
+    "Product": {
+      "title": "Coffee Product",
+      "description": "Green specialty and commercial coffee export offerings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "origin": { "type": "string" },
+        "grade": { "type": "string" },
+        "processing": { "type": "string" },
+        "scaScore": { "type": "number" },
+        "cropYear": { "type": "string" },
+        "screenSize": { "type": "string" },
+        "availableBags": { "type": "number" },
+        "availableWeightKg": { "type": "number" },
+        "indicativeFobPriceUSD": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["name", "origin", "grade", "processing", "scaScore"]
+    },
+    "RFQ": {
+      "title": "Request for Quotation",
+      "description": "Commercial inquiry from international coffee buyers",
+      "type": "object",
+      "properties": {
+        "rfqNumber": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "productId": { "type": "string" },
+        "quantityUnit": { "type": "string" },
+        "quantity": { "type": "number" },
+        "incoterm": { "type": "string" },
+        "destinationPort": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["rfqNumber", "buyerId", "quantity", "incoterm", "destinationPort"]
+    },
+    "Quotation": {
+      "title": "Commercial Quotation",
+      "description": "Official exporter price offer with freight and insurance breakdown",
+      "type": "object",
+      "properties": {
+        "quotationNumber": { "type": "string" },
+        "rfqId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "unitPriceUSD": { "type": "number" },
+        "totalAmountUSD": { "type": "number" },
+        "validUntil": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["quotationNumber", "rfqId", "buyerId", "totalAmountUSD", "status"]
+    },
+    "Order": {
+      "title": "Sales Order Contract",
+      "description": "Legally binding coffee export sales contract",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string" },
+        "contractNumber": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "totalAmountUSD": { "type": "number" },
+        "orderStatus": { "type": "string" },
+        "paymentStatus": { "type": "string" }
+      },
+      "required": ["orderNumber", "buyerId", "totalAmountUSD", "orderStatus"]
+    },
+    "Shipment": {
+      "title": "Export Shipment",
+      "description": "Container tracking along Ethio-Djibouti corridor to destination",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "containerNumber": { "type": "string" },
+        "sealNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "portOfLoading": { "type": "string" },
+        "portOfDischarge": { "type": "string" }
+      },
+      "required": ["orderId", "status"]
+    },
+    "TraceabilityRecord": {
+      "title": "Traceability Record",
+      "description": "Farm-to-cup provenance, GPS coordinates, and farmer compensation",
+      "type": "object",
+      "properties": {
+        "lotNumber": { "type": "string" },
+        "washingStation": { "type": "string" },
+        "kebele": { "type": "string" },
+        "woreda": { "type": "string" },
+        "altitude": { "type": "number" },
+        "farmersCount": { "type": "number" }
+      },
+      "required": ["lotNumber", "washingStation"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "ECTA and National Bank of Ethiopia compliance audit trail",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "performedByEmail": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "entityType", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "entity": "User",
+      "description": "Exporter staff and registered international coffee buyers",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "buyerProfiles": {
+      "entity": "BuyerProfile",
+      "description": "Importer profiles, shipping ports, and purchasing capacity",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "origins": {
+      "entity": "Origin",
+      "description": "Ethiopian coffee terroir regions, soil data, and station profiles",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "products": {
+      "entity": "Product",
+      "description": "Specialty and commercial green coffee export inventory lots",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "lots": {
+      "entity": "TraceabilityRecord",
+      "description": "Coffee harvesting lots and physical stock tracking",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "rfqs": {
+      "entity": "RFQ",
+      "description": "Commercial inquiries and Requests for Quotation from buyers",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "quotations": {
+      "entity": "Quotation",
+      "description": "Formal proforma price offers issued to international buyers",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "orders": {
+      "entity": "Order",
+      "description": "Confirmed export contracts and shipment orders",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "payments": {
+      "entity": "Payment",
+      "description": "Payment records, Letters of Credit, and Swift confirmations",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "shipments": {
+      "entity": "Shipment",
+      "description": "Ethio-Djibouti railway and ocean vessel shipping statuses",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "exportDocuments": {
+      "entity": "ExportDocument",
+      "description": "ECTA, Phytosanitary, Certificate of Origin, and Shipping documents",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "traceabilityRecords": {
+      "entity": "TraceabilityRecord",
+      "description": "Seed-to-cup provenance and smallholder washing station ledgers",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "auditLogs": {
+      "entity": "AuditLog",
+      "description": "Immutable compliance logs for regulatory tracking",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "blogPosts": {
+      "entity": "BlogPost",
+      "description": "Origin harvest reports and Ethiopian coffee market intelligence",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "testimonials": {
+      "entity": "Testimonial",
+      "description": "Verified global buyer reviews and partnership testimonials",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "conversations": {
+      "entity": "Conversation",
+      "description": "Direct communication between buyers and MY KUHLI trade desk",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "notifications": {
+      "entity": "Notification",
+      "description": "Operational alerts and milestone updates",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "settings": {
+      "entity": "Settings",
+      "description": "System and platform configuration",
+      "securityRules": {
+        "read": "true",
+        "write": "true"
+      }
+    }
+  }
+}

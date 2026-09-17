@@ -1,0 +1,6 @@
+{
+  "name": "MY KUHLI - Ethiopian Coffee Exporter",
+  "description": "Premium Ethiopian coffee sourcing, processing, and international B2B export platform connecting Ethiopian origins with global roasters and buyers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
